@@ -70,10 +70,12 @@ jobs:
           rm -rf "$OUT" "$OUT.tmp"
           mkdir -p "$OUT" "$OUT.tmp/Payload"
           cp -R "$APPS/Runner.app" "$OUT.tmp/Payload/Runner.app"
-          (cd "$OUT.tmp/Payload" && zip -qrX Runner.ipa Runner.app)
-          mv "$OUT.tmp/Payload/Runner.ipa" "$OUT/Runner.ipa"
+          (cd "$OUT.tmp" && zip -qrX Runner.ipa Payload)
+          mv "$OUT.tmp/Runner.ipa" "$OUT/Runner.ipa"
           rm -rf "$OUT.tmp"
           unzip -l "$OUT/Runner.ipa" | head -15
+          # fail loudly if the IPA structure is ever wrong
+          unzip -l "$OUT/Runner.ipa" | grep -q "Payload/Runner.app/Runner"
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
