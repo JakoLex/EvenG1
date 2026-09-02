@@ -1,7 +1,7 @@
 # Builds the EvenG1 iOS app as an IPA on every push to main (and on demand).
 #
 # Job 1 (build-unsigned) ALWAYS runs and uploads an unsigned IPA:
-#   build/ios/ipa/Runner.ipa  -> artifact "even-g1-ipa-unsigned"
+#   build/ios/unsigned-ipa/Runner.ipa  -> artifact "even-g1-ipa-unsigned"
 # An unsigned IPA can be signed later with Xcode (Open in Xcode > Product > Archive > Distribute)
 # or by enabling the sign job below.
 #
