@@ -57,7 +57,8 @@ jobs:
         run: cd ios && pod install
 
       # --no-codesign only produces the .xcarchive (build/ios/archive/Runner.xcarchive),
-      # so we export an unsigned IPA from it with signingStyle "none".
+      # so we export an unsigned IPA from it using the "validation" method
+      # (Xcode 15.4+; exports without code signing).
       - name: Build archive
         run: flutter build ipa --release --no-codesign
 
@@ -70,9 +71,7 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
-            <key>signingStyle</key>
-            <string>none</string>
+            <string>validation</string>
           </dict>
           </plist>
           EOF
