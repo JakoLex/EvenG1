@@ -56,29 +56,24 @@ jobs:
       - name: CocoaPods install
         run: cd ios && pod install
 
-      # --no-codesign only produces the .xcarchive (build/ios/archive/Runner.xcarchive),
-      # so we export an unsigned IPA from it using the "validation" method
-      # (Xcode 15.4+; exports without code signing).
+      # --no-codesign only produces the .xcarchive (build/ios/archive/Runner.xcarchive).
+      # xcodebuild -exportArchive refuses to export without a team/certificate, so we
+      # package the standard IPA layout (Payload/Runner.app) from the archive directly.
       - name: Build archive
         run: flutter build ipa --release --no-codesign
 
-      - name: Export unsigned IPA
+      - name: Package unsigned IPA
         run: |
           set -euo pipefail
-          cat > unsigned-export.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>validation</string>
-          </dict>
-          </plist>
-          EOF
-          xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportOptionsPlist unsigned-export.plist \
-            -exportPath build/ios/unsigned-ipa
+          APPS=build/ios/archive/Runner.xcarchive/Products/Applications
+          OUT=build/ios/unsigned-ipa
+          rm -rf "$OUT" "$OUT.tmp"
+          mkdir -p "$OUT" "$OUT.tmp/Payload"
+          cp -R "$APPS/Runner.app" "$OUT.tmp/Payload/Runner.app"
+          (cd "$OUT.tmp/Payload" && zip -qrX Runner.ipa Runner.app)
+          mv "$OUT.tmp/Payload/Runner.ipa" "$OUT/Runner.ipa"
+          rm -rf "$OUT.tmp"
+          unzip -l "$OUT/Runner.ipa" | head -15
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
