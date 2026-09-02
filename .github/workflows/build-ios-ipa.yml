@@ -56,14 +56,36 @@ jobs:
       - name: CocoaPods install
         run: cd ios && pod install
 
-      - name: Build unsigned IPA
+      # --no-codesign only produces the .xcarchive (build/ios/archive/Runner.xcarchive),
+      # so we export an unsigned IPA from it with signingStyle "none".
+      - name: Build archive
         run: flutter build ipa --release --no-codesign
+
+      - name: Export unsigned IPA
+        run: |
+          set -euo pipefail
+          cat > unsigned-export.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>none</string>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportOptionsPlist unsigned-export.plist \
+            -exportPath build/ios/unsigned-ipa
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
           name: even-g1-ipa-unsigned
-          path: build/ios/ipa/*.ipa
+          path: build/ios/unsigned-ipa/*.ipa
           if-no-files-found: error
 
       - name: Check signing secrets
@@ -154,7 +176,7 @@ jobs:
       - name: Export signed IPA
         run: |
           xcodebuild -exportArchive \
-            -archivePath build/ios/ios/Runner.xcarchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
             -exportPath build/ios/signed-export
 

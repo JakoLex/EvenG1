@@ -55,7 +55,8 @@ maximum width is 488 pixels, with eac
 (and via Actions → Run workflow):
 
 - **build-unsigned** (always): produces an **unsigned IPA**
-  (`build/ios/ipa/Runner.ipa`, uploaded as artifact `even-g1-ipa-unsigned`).
+  (exported from `build/ios/archive/Runner.xcarchive`, uploaded as artifact
+  `even-g1-ipa-unsigned`).
   You can sign it locally by opening the project in Xcode → Product → Archive →
   Distribute App, or enable the signing job below.
 - **sign** (only when secrets are configured): builds a **signed IPA**
