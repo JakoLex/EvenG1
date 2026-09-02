@@ -51,27 +51,31 @@ maximum width is 488 pixels, with eac
 
 ## Building the IPA with GitHub Actions
 
-`.github/workflows/build-ios-ipa.yml` builds the iOS app on every push to `main`
-(and via Actions → Run workflow):
+`.github/workflows/build-ios-ipa.yml` builds an **unsigned** IPA on every push
+to `main`, on tag pushes, and via Actions → Run workflow:
 
-- **build-unsigned** (always): produces an **unsigned IPA**
+- **build-unsigned** (always): produces the unsigned IPA
   (packaged from `build/ios/archive/Runner.xcarchive` as `Payload/Runner.app`,
   uploaded as artifact `even-g1-ipa-unsigned`).
-  You can sign it locally by opening the project in Xcode → Product → Archive →
-  Distribute App, or enable the signing job below.
-- **sign** (only when secrets are configured): builds a **signed IPA**
-  (artifact `even-g1-ipa-signed`) using:
-  - secrets: `IOS_CERT_P12_BASE64` (base64 of the `.p12`),
-    `IOS_CERT_P12_PASSWORD`, `IOS_PROVISION_PROFILE_BASE64` (base64 of the `.mobileprovision`)
-  - variables: `IOS_TEAM_ID`, `IOS_EXPORT_METHOD` (default `app-store`, or `ad-hoc`),
-    `IOS_PROFILE_NAME` (optional, default `EvenG1`)
+  No Apple certificate or provisioning profile is needed — the IPA is
+  intentionally unsigned because it is meant for sideloading.
+- **release** (on main / tags / manual run): publishes the IPA as a
+  **GitHub Release asset** named `EvenG1-ios-unsigned.ipa`:
+  - every push to `main` updates the rolling release tagged **`latest`**
+    (always the newest build),
+  - pushing a tag `v*` (e.g. `v1.0.0`) creates a versioned release,
+  - a manual run lets you pick any release tag (default `latest`).
 
-Example:
+### Installing on your iPhone (SideStore)
 
-```sh
-base64 -i YourCertificate.p12 | pbcopy            # -> IOS_CERT_P12_BASE64
-base64 -i EvenG1.mobileprovision | pbcopy         # -> IOS_PROVISION_PROFILE_BASE64
-```
+1. Download `EvenG1-ios-unsigned.ipa` from the [Releases page](https://github.com/JakoLex/EvenG1/releases)
+   (tag `latest` = newest build) or from the run's **Artifacts**.
+2. Install [SideStore](https://sidestore.io) once on your iPhone (via [iLoader](https://iloader.io)
+   on a computer, using any Apple ID).
+3. Open SideStore on the phone, import the downloaded IPA, and tap **Install**.
+   SideStore re-signs the app with your Apple ID — no certificate setup needed.
+   (Free sideloading resets after ~7 days; SideStore can refresh the app wirelessly
+   while SideStore itself is refreshed on a computer.)
 
 ## Protocol
 ### TouchBar Events
