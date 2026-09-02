@@ -49,6 +49,29 @@ maximum width is 488 pixels, with eac
 
 
 
+## Building the IPA with GitHub Actions
+
+`.github/workflows/build-ios-ipa.yml` builds the iOS app on every push to `main`
+(and via Actions → Run workflow):
+
+- **build-unsigned** (always): produces an **unsigned IPA**
+  (`build/ios/ipa/Runner.ipa`, uploaded as artifact `even-g1-ipa-unsigned`).
+  You can sign it locally by opening the project in Xcode → Product → Archive →
+  Distribute App, or enable the signing job below.
+- **sign** (only when secrets are configured): builds a **signed IPA**
+  (artifact `even-g1-ipa-signed`) using:
+  - secrets: `IOS_CERT_P12_BASE64` (base64 of the `.p12`),
+    `IOS_CERT_P12_PASSWORD`, `IOS_PROVISION_PROFILE_BASE64` (base64 of the `.mobileprovision`)
+  - variables: `IOS_TEAM_ID`, `IOS_EXPORT_METHOD` (default `app-store`, or `ad-hoc`),
+    `IOS_PROFILE_NAME` (optional, default `EvenG1`)
+
+Example:
+
+```sh
+base64 -i YourCertificate.p12 | pbcopy            # -> IOS_CERT_P12_BASE64
+base64 -i EvenG1.mobileprovision | pbcopy         # -> IOS_PROVISION_PROFILE_BASE64
+```
+
 ## Protocol
 ### TouchBar Events
 #### Single Tap
