@@ -45,12 +45,12 @@ class FaceRenderer {
   /// 1 = ON). Row 0 is the top of the picture.
   Future<Uint8List> renderBits(Face face, FaceData data) async {
     final recorder = PictureRecorder();
-    final canvas = recorder.startRecording();
+    final canvas = Canvas(recorder);
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, width, height),
+      Rect.fromLTWH(0.0, 0.0, width.toDouble(), height.toDouble()),
       Paint()..color = const Color(0xFF000000),
     );
-    face.paint(canvas, Size(width, height), data);
+    face.paint(canvas, Size(width.toDouble(), height.toDouble()), data);
     final picture = recorder.endRecording();
     final image = await picture.toImage(width, height);
     final byteData = await image.toByteData(format: ImageByteFormat.rawRgba);

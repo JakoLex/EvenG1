@@ -226,10 +226,10 @@ class _PreviewPainter extends CustomPainter {
     canvas.save();
     canvas.scale(scale, scale);
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, kFaceWidth, kFaceHeight),
+      Rect.fromLTWH(0.0, 0.0, kFaceWidth.toDouble(), kFaceHeight.toDouble()),
       Paint()..color = Colors.black,
     );
-    _face.paint(canvas, Size(kFaceWidth, kFaceHeight), _data);
+    _face.paint(canvas, Size(kFaceWidth.toDouble(), kFaceHeight.toDouble()), _data);
     canvas.restore();
   }
 

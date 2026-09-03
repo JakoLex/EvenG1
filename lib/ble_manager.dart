@@ -126,7 +126,7 @@ class BleManager {
     } catch (e) {
       print('Glasses session init failed: $e');
     }
-    FaceScheduler.get().onConnected();
+    FaceScheduler.get.onConnected();
   }
 
   int tryTime = 0;
@@ -156,7 +156,7 @@ class BleManager {
     isConnected = false;
 
     onStatusChanged?.call();
-    FaceScheduler.get().onDisconnected();
+    FaceScheduler.get.onDisconnected();
     // A failed reconnect attempt reports this event too - in both cases the
     // chain continues (a new chain starts if none is running).
     if (_reconnectActive) {
@@ -268,7 +268,7 @@ class BleManager {
     if (res.data[0].toInt() == 0x2C &&
         res.data.length >= 3 &&
         res.data[1].toInt() == 0x66) {
-      FaceScheduler.get().onBattery(res.lr, res.data[2].toInt());
+      FaceScheduler.get.onBattery(res.lr, res.data[2].toInt());
       return;
     }
 
@@ -282,12 +282,12 @@ class BleManager {
         case 1: // single tap
           // Faces mode wins for single taps unless EvenAI is actively
           // running (long-press flow) - then EvenAI paging keeps working.
-          if (FaceScheduler.get().facesEnabled.value &&
+          if (FaceScheduler.get.facesEnabled.value &&
               !EvenAI.isRunning) {
             if (res.lr == 'L') {
-              FaceScheduler.get().prevFace();
+              FaceScheduler.get.prevFace();
             } else {
-              FaceScheduler.get().nextFace();
+              FaceScheduler.get.nextFace();
             }
           } else if (res.lr == 'L') {
             EvenAI.get.lastPageByTouchpad();
@@ -296,10 +296,10 @@ class BleManager {
           }
           break;
         case 6: // worn
-          FaceScheduler.get().onWearChanged(true);
+          FaceScheduler.get.onWearChanged(true);
           break;
         case 7: // removed
-          FaceScheduler.get().onWearChanged(false);
+          FaceScheduler.get.onWearChanged(false);
           break;
         case 23: //BleEvent.evenaiStart:
           EvenAI.get.toStartEvenAIByOS();

@@ -15,7 +15,7 @@ void main() async {
   Get.put(EvenaiModelController());
   KeepAliveService.create();
   FaceScheduler.create();
-  await FaceScheduler.get().init();
+  await FaceScheduler.get.init();
 
   runApp(MyApp());
 }

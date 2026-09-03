@@ -297,7 +297,7 @@ class FaceScheduler extends GetxService {
   void _syncKeepAlive() {
     final shouldRun =
         facesEnabled.value && _connected && keepAliveEnabled.value;
-    KeepAliveService.get().set(shouldRun);
+    KeepAliveService.get.set(shouldRun);
   }
 
   @override
@@ -305,7 +305,7 @@ class FaceScheduler extends GetxService {
     _tick?.cancel();
     _tick = null;
     try {
-      KeepAliveService.get().stop();
+      KeepAliveService.get.stop();
     } catch (_) {
       // not registered (e.g. in tests) - nothing to stop
     }
