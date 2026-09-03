@@ -27,7 +27,7 @@ class FaceScheduler extends GetxService {
 
   static FaceScheduler create() =>
       Get.put(FaceScheduler._(), permanent: true);
-  static FaceScheduler get => Get.find<FaceScheduler>();
+  static FaceScheduler get get => Get.find<FaceScheduler>();
 
   /// Face order; single-tap left/right cycles through this list (wrap-around).
   static const List<Face> faces = [ClockFace(), TextFace(), LinkFace()];
@@ -78,16 +78,16 @@ class FaceScheduler extends GetxService {
       print('FaceScheduler init failed: $e');
     }
 
-    facesEnabled.obs((_) {
+    facesEnabled.listen((_) {
       _persist();
       _onEnabledChanged();
     });
-    keepAliveEnabled.obs((_) {
+    keepAliveEnabled.listen((_) {
       _persist();
       _syncKeepAlive();
     });
-    activeFaceIndex.obs((_) => _persist());
-    customText.obs((_) {
+    activeFaceIndex.listen((_) => _persist());
+    customText.listen((_) {
       _persist();
       // live edit: refresh immediately while the text face is on the glasses
       if (activeFaceIndex.value == 1 &&
@@ -98,7 +98,7 @@ class FaceScheduler extends GetxService {
         pushActiveFace();
       }
     });
-    linkIntervalSec.obs((_) {
+    linkIntervalSec.listen((_) {
       linkIntervalSec.value = _clampInterval(linkIntervalSec.value);
       _persist();
     });

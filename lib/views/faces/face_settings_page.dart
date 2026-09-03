@@ -226,10 +226,10 @@ class _PreviewPainter extends CustomPainter {
     canvas.save();
     canvas.scale(scale, scale);
     canvas.drawRect(
-      const Rect.fromLTWH(0, 0, kFaceWidth, kFaceHeight),
+      Rect.fromLTWH(0, 0, kFaceWidth, kFaceHeight),
       Paint()..color = Colors.black,
     );
-    _face.paint(canvas, const Size(kFaceWidth, kFaceHeight), _data);
+    _face.paint(canvas, Size(kFaceWidth, kFaceHeight), _data);
     canvas.restore();
   }
 

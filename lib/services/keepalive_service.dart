@@ -15,7 +15,7 @@ class KeepAliveService extends GetxService {
 
   static KeepAliveService create() =>
       Get.put(KeepAliveService._(), permanent: true);
-  static KeepAliveService get => Get.find<KeepAliveService>();
+  static KeepAliveService get get => Get.find<KeepAliveService>();
 
   static const MethodChannel _channel = MethodChannel('method.keepalive');
 

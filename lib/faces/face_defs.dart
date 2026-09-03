@@ -77,8 +77,9 @@ abstract class Face {
         ),
       ),
       textDirection: TextDirection.ltr,
-      maxWidth: maxWidth,
-    )..layout();
+    );
+    tp.layout(
+        maxWidth != null ? Constraints(maxWidth: maxWidth) : const Constraints());
     tp.paint(canvas, position);
   }
 }
@@ -137,8 +138,8 @@ class TextFace extends Face {
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
-      maxWidth: size.width - 40,
-    )..layout();
+    );
+    tp.layout(Constraints(maxWidth: size.width - 40));
 
     // cap to ~5 lines
     final maxLines = 5;

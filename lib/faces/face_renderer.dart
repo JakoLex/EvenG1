@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui' show ImageByteFormat, PictureRecorder;
 
 import 'package:demo_ai_even/faces/face_defs.dart';
 import 'package:flutter/rendering.dart';
@@ -44,19 +45,20 @@ class FaceRenderer {
   /// 1 = ON). Row 0 is the top of the picture.
   Future<Uint8List> renderBits(Face face, FaceData data) async {
     final recorder = PictureRecorder();
-    final canvas = Canvas(recorder, const Size(width, height));
+    final canvas = recorder.startRecording();
     canvas.drawRect(
-      const Rect.fromLTWH(0, 0, width, height),
+      Rect.fromLTWH(0, 0, width, height),
       Paint()..color = const Color(0xFF000000),
     );
-    face.paint(canvas, const Size(width, height), data);
+    face.paint(canvas, Size(width, height), data);
     final picture = recorder.endRecording();
     final image = await picture.toImage(width, height);
-    final byteData =
-        await image.toByteData(format: ImageByteFormat.rawRgba) ??
-            throw StateError('toByteData returned null');
+    final byteData = await image.toByteData(format: ImageByteFormat.rawRgba);
     image.dispose();
     picture.dispose();
+    if (byteData == null) {
+      throw StateError('toByteData returned null');
+    }
 
     final rgba = byteData.buffer.asUint8List(byteData.offsetInBytes);
     return floydSteinberg(rgba, width, height);
@@ -66,7 +68,8 @@ class FaceRenderer {
   Future<Uint8List> renderBmp(Face face, FaceData data,
       {Uint8List? header}) async {
     final bits = await renderBits(face, data);
-    return encodeBmp(bits, header: header ?? await header());
+    final hdr = header ?? await this.header();
+    return encodeBmp(bits, header: hdr);
   }
 
   /// Floyd-Steinberg dither of RGBA to 1 bit (row-major, MSB of each
