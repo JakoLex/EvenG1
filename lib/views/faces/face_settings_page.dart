@@ -17,6 +17,8 @@ class FaceSettingsPage extends StatefulWidget {
 class _FaceSettingsPageState extends State<FaceSettingsPage> {
   late final TextEditingController _textController;
   Timer? _previewTicker;
+  Timer? _textDebounce;
+  String? _pendingText;
 
   @override
   void initState() {
@@ -31,8 +33,26 @@ class _FaceSettingsPageState extends State<FaceSettingsPage> {
   @override
   void dispose() {
     _previewTicker?.cancel();
+    _textDebounce?.cancel();
+    _commitText(); // do not drop what was typed right before leaving
     _textController.dispose();
     super.dispose();
+  }
+
+  /// Every keystroke persists the text and (on the text face) triggers a BMP
+  /// push that takes seconds - so only commit once typing pauses.
+  void _onTextChanged(String value) {
+    _pendingText = value;
+    _textDebounce?.cancel();
+    _textDebounce = Timer(const Duration(milliseconds: 500), _commitText);
+  }
+
+  void _commitText() {
+    final value = _pendingText;
+    _pendingText = null;
+    if (value != null) {
+      FaceScheduler.get.customText.value = value;
+    }
   }
 
   @override
@@ -89,7 +109,7 @@ class _FaceSettingsPageState extends State<FaceSettingsPage> {
                   TextField(
                     controller: _textController,
                     maxLines: 3,
-                    onChanged: (v) => fs.customText.value = v,
+                    onChanged: _onTextChanged,
                     decoration: const InputDecoration(
                       hintText: 'Type something…',
                     ),

@@ -264,12 +264,13 @@ class BleManager {
     }
 
     // Battery level report per side: [0x2C, 0x66, percent 0-100, ...]
-    // (reply to GET_BATTERY and also pushed unsolicited)
+    // (reply to GET_BATTERY and also pushed unsolicited). No early return:
+    // this may be the reply to a pending request(), which still has to be
+    // completed at the bottom of this method.
     if (res.data[0].toInt() == 0x2C &&
         res.data.length >= 3 &&
         res.data[1].toInt() == 0x66) {
       FaceScheduler.get.onBattery(res.lr, res.data[2].toInt());
-      return;
     }
 
     if (res.data[0].toInt() == 0xF5) {

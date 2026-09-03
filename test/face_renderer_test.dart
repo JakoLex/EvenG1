@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:demo_ai_even/faces/face_defs.dart';
 import 'package:demo_ai_even/faces/face_renderer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -126,6 +127,29 @@ void main() {
       }
       final file = FaceRenderer.encodeBmp(bits, header: header);
       expect(decodePxBits(file), [for (final b in bits) b]);
+    });
+  });
+
+  group('TextFace', () {
+    testWidgets('long text stays inside the 136 px panel', (tester) async {
+      final data = FaceData(
+        now: DateTime(2026, 9, 24, 12, 0, 0),
+        connected: true,
+        glassesWorn: true,
+        linkCounter: 0,
+        lastSuccessAt: null,
+        linkIntervalSec: 2,
+        customText: List.generate(20, (i) => 'line $i').join('\n'),
+      );
+      final bits = await FaceRenderer().renderBits(const TextFace(), data);
+      // maxLines keeps the block centered; the outermost rows must stay off.
+      for (final y in [0, h - 1]) {
+        for (var x = 0; x < w; x++) {
+          expect(bits[y * w + x], 0, reason: 'pixel ($x,$y) outside the block');
+        }
+      }
+      // and something was actually drawn
+      expect(bits.contains(1), isTrue);
     });
   });
 

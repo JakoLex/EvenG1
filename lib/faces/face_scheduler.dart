@@ -131,6 +131,10 @@ class FaceScheduler extends GetxService {
   void _onEnabledChanged() {
     if (facesEnabled.value) {
       if (_connected) {
+        // onConnected() only starts the pump when faces were already on, so
+        // enabling them later has to start it here - otherwise the first
+        // frame would be the last one.
+        _startTicking();
         _lastMinute = -1;
         pushActiveFace();
       }

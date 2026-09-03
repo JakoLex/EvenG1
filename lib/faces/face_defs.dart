@@ -127,26 +127,33 @@ class TextFace extends Face {
   @override
   String get name => 'Text';
 
+  static const double _fontSize = 22;
+  static const double _lineHeight = 1.35;
+
   @override
   void paint(Canvas canvas, Size size, FaceData data) {
     final text = data.customText.trim().isEmpty ? '(empty)' : data.customText;
+    // Hard cap on the painter itself: without maxLines the block is laid out
+    // in full and paints past the 136 px panel, clipped mid-line.
+    final maxLines = (size.height / (_fontSize * _lineHeight)).floor();
     final tp = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(color: Colors.white, fontSize: 22, height: 1.35),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: _fontSize,
+          height: _lineHeight,
+        ),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
+      maxLines: maxLines < 1 ? 1 : maxLines,
+      ellipsis: '\u2026',
     );
     tp.layout(maxWidth: size.width - 40);
 
-    // cap to ~5 lines
-    final maxLines = 5;
-    final blockHeight = tp.height > maxLines * 22 * 1.35
-        ? maxLines * 22 * 1.35
-        : tp.height;
-    final y = (size.height - blockHeight) / 2;
-    final x = (size.width - (tp.width > 0 ? tp.width : 0)) / 2;
+    final y = ((size.height - tp.height) / 2).clamp(0.0, size.height);
+    final x = (size.width - tp.width) / 2;
     tp.paint(canvas, Offset(x.clamp(20.0, size.width - 20.0), y));
   }
 }

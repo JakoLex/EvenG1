@@ -104,9 +104,13 @@ jobs:
           (cd "$OUT.tmp" && zip -qrX Runner.ipa Payload)
           mv "$OUT.tmp/Runner.ipa" "$OUT/Runner.ipa"
           rm -rf "$OUT.tmp"
-          unzip -l "$OUT/Runner.ipa" | head -15
+          # Listing goes to a file first: piping unzip into head/grep lets the
+          # reader close the pipe early, and the resulting SIGPIPE (exit 141)
+          # would fail the step under `set -o pipefail`.
+          unzip -l "$OUT/Runner.ipa" > build/ios/ipa-list.txt
+          head -15 build/ios/ipa-list.txt
           # fail loudly if the IPA structure is ever wrong
-          unzip -l "$OUT/Runner.ipa" | grep -q "Payload/Runner.app/Runner"
+          grep -q "Payload/Runner.app/Runner" build/ios/ipa-list.txt
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
