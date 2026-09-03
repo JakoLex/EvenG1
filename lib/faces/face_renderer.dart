@@ -77,8 +77,9 @@ class FaceRenderer {
   static Uint8List floydSteinberg(Uint8List rgba, int w, int h) {
     final n = w * h;
     final gray = Float64List(n);
-    for (var i = 0; i < n; i += 4) {
-      gray[i ~/ 4] = (rgba[i] + rgba[i + 1] + rgba[i + 2]) / 3.0;
+    for (var i = 0; i < n; i++) {
+      final r = 4 * i;
+      gray[i] = (rgba[r] + rgba[r + 1] + rgba[r + 2]) / 3.0;
     }
     final bits = Uint8List(n);
     for (var y = 0; y < h; y++) {
