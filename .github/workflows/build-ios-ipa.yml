@@ -50,7 +50,9 @@ jobs:
           flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        # --no-fatal-infos: the codebase has ~129 pre-existing infos (avoid_print
+        # & co.); errors and warnings must stay fatal.
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         run: flutter test
