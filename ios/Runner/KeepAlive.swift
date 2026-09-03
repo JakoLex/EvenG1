@@ -117,7 +117,7 @@ final class KeepAlive {
 
         let pcm = Data(count: dataSize) // all zeros = digital silence
         do {
-            try header + pcm.write(to: url)
+            try (header + pcm).write(to: url)
             return url
         } catch {
             print("KeepAlive: failed to write silent wav: \(error)")
