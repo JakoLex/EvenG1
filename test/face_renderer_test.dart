@@ -141,15 +141,21 @@ void main() {
         linkIntervalSec: 2,
         customText: List.generate(20, (i) => 'line $i').join('\n'),
       );
-      final bits = await FaceRenderer().renderBits(const TextFace(), data);
+      // picture.toImage() completes on a real engine callback, which the
+      // fake async zone of testWidgets never delivers - hence runAsync.
+      final bits = await tester.runAsync(
+        () => FaceRenderer().renderBits(const TextFace(), data),
+      );
+      expect(bits, isNotNull);
       // maxLines keeps the block centered; the outermost rows must stay off.
       for (final y in [0, h - 1]) {
         for (var x = 0; x < w; x++) {
-          expect(bits[y * w + x], 0, reason: 'pixel ($x,$y) outside the block');
+          expect(bits![y * w + x], 0,
+              reason: 'pixel ($x,$y) outside the block');
         }
       }
       // and something was actually drawn
-      expect(bits.contains(1), isTrue);
+      expect(bits!.contains(1), isTrue);
     });
   });
 
