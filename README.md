@@ -27,6 +27,60 @@ The core process includes three steps:
 For a specific example, click the icon in the upper right corner of the App homepage to enter the Features page. The page contains three buttons: BMP 1, BMP 2, and Exit, which represent the transmission and display of picture 1, the transmission and display of picture 2, and the exit of picture transmission and display.
 
 
+## Even Faces (watch-like mode)
+
+Even Faces turns the G1 into an Apple-Watch-style display: the app continuously
+renders a *face* to the 576x136 panel of **both** arms (the same 1-bit BMP
+pipeline as Image Sending, L and R in parallel).
+
+**Faces** (cycle through them with one tap):
+- **Clock** — `HH:MM` plus short date (e.g. `Do, 24.09.`), refreshed on the minute.
+- **Text** — your own multi-line text (edited in the app, up to ~5 lines),
+  refreshed on change.
+- **Link / Diagnostics** — `HH:MM:SS`, push success counter, `LINK OK #n` /
+  `NO LINK` (based on the last successful L+R push) and battery per arm
+  (from the 0x2C reports). Refresh interval configurable, 2–10 s.
+
+**Navigation** (touchpad meanings are user-remappable on the glasses — with the
+factory mapping):
+- single tap **left** touchpad → previous face, single tap **right** → next face
+  (wrap-around).
+- While Even AI is actively running (long-press flow), single taps keep their
+  Even AI paging behavior; otherwise Faces mode wins.
+
+**Settings** (home page tile "Even Faces" or Features → Even Faces):
+master switch, face picker, a live preview of exactly what the glasses show,
+custom text editor, link-face refresh interval, and the keep-alive toggle.
+Everything is persisted via SharedPreferences. Faces are **on by default** —
+on connect the G1 immediately behaves like a watch.
+
+**How it stays alive in the background:**
+- `UIBackgroundModes: [bluetooth-central, audio]` in the iOS app.
+- A silent looping tone (`ios/Runner/KeepAlive.swift`) keeps the process
+  running indefinitely; it is on by default and can be disabled in settings.
+- The 8 s heartbeat is sent while a face session is active, so the 32 s
+  glasses-side idle timeout never fires.
+
+**Auto-reconnect:** if the link drops (BT toggle, distance, app restart),
+the app reconnects to the last channel — every 2 s for the first ~30 s, then
+with a ramp up to 5 min intervals, giving up after ~2 h (so it does not fight
+the official Even G1 app forever).
+
+**Behavior details:**
+- While the glasses are not worn (0xF5 06/07 wear events) the pump pauses and
+  re-pushes the face as soon as they are worn again.
+- Disabling Faces while connected sends 0x18 (exit) so the glasses return to
+  their dashboard instead of showing a stale face.
+
+**Known limitations:**
+- A full face push (51 BMP chunks per arm + finish + CRC) takes ~5–8 s over
+  BLE, so the *effective* refresh of the Link face is throughput-limited
+  regardless of the configured interval (the interval acts as a lower bound).
+- The touchpad gestures (single/double/triple tap, long press) can be
+  re-mapped in the glasses' own settings; Faces uses single tap L/R.
+- HealthKit, notifications and other system data are not connected yet.
+
+
 ## Text Sending
 Currently, the demo supports sending text directly to the glasses and displaying it.
 The core steps are as follows:

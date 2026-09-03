@@ -29,10 +29,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  analyze-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          flutter config --no-analytics
+          flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
   build-unsigned:
     name: Build unsigned IPA
     runs-on: macos-14
     timeout-minutes: 40
+    needs: analyze-test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -90,7 +117,7 @@ jobs:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build-unsigned
+    needs: [analyze-test, build-unsigned]
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'))

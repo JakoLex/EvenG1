@@ -1,30 +1,33 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:demo_ai_even/faces/face_scheduler.dart';
+import 'package:demo_ai_even/services/keepalive_service.dart';
+import 'package:demo_ai_even/views/faces/face_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:demo_ai_even/main.dart';
+import 'package:get/get.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  testWidgets('Face settings page renders (smoke)', (tester) async {
+    Get.reset();
+    KeepAliveService.create();
+    FaceScheduler.create();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(
+      const MaterialApp(home: FaceSettingsPage()),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.text('Even Faces'), findsOneWidget);
+    expect(find.text('Preview (what the glasses show)'), findsOneWidget);
+    expect(find.text('Clock'), findsOneWidget);
+    expect(find.text('Text'), findsOneWidget);
+    expect(find.text('Link'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // let the 1 s preview ticker fire a few times, then settle
+    await tester.pump(const Duration(seconds: 3));
+    expect(tester.takeException(), isNull);
+
+    // unmount so the preview ticker's periodic Timer is cancelled
+    await tester.pumpWidget(const SizedBox.shrink());
+
+    Get.reset();
   });
 }

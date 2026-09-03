@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:demo_ai_even/views/faces/face_settings_page.dart';
 import 'package:demo_ai_even/views/features/bmp_page.dart';
 import 'package:demo_ai_even/views/features/notification/notification_page.dart';
 import 'package:demo_ai_even/views/features/text_page.dart';
@@ -28,6 +29,24 @@ class _FeaturesPageState extends State<FeaturesPage> {
                 onTap: () async {
                   Navigator.push(
                     context,
+                    MaterialPageRoute(
+                        builder: (context) => const FaceSettingsPage()),
+                  );
+                },
+                child: Container(
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text("Even Faces", style: TextStyle(fontSize: 16)),
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  Navigator.push(
+                    context,
                     MaterialPageRoute(builder: (context) => const BmpPage()),
                   );
                 },
@@ -38,6 +57,7 @@ class _FeaturesPageState extends State<FeaturesPage> {
                     borderRadius: BorderRadius.circular(5),
                   ),
                   alignment: Alignment.center,
+                  margin: const EdgeInsets.only(top: 16),
                   child: const Text("BMP", style: TextStyle(fontSize: 16)),
                 ),
               ),

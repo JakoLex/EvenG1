@@ -3,8 +3,10 @@
 import 'dart:async';
 
 import 'package:demo_ai_even/ble_manager.dart';
+import 'package:demo_ai_even/faces/face_scheduler.dart';
 import 'package:demo_ai_even/services/evenai.dart';
 import 'package:demo_ai_even/views/even_list_page.dart';
+import 'package:demo_ai_even/views/faces/face_settings_page.dart';
 import 'package:demo_ai_even/views/features_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -46,6 +48,58 @@ class _HomePageState extends State<HomePage> {
       setState(() => isScanning = false);
     }
   }
+
+  Widget _facesTile() => Obx(() {
+        final fs = FaceScheduler.get;
+        final face = FaceScheduler.faces[fs.activeFaceIndex.value];
+        final last = fs.lastSuccessAt.value;
+        final ok = last != null &&
+            DateTime.now()
+                .difference(last)
+                .inSeconds <
+                3 * fs.linkIntervalSec.value;
+        final status = !fs.facesEnabled.value
+            ? 'off'
+            : (BleManager.get().isConnected
+                ? (ok ? 'LINK OK  #${fs.linkCounter.value}' : 'NO LINK')
+                : 'not connected');
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const FaceSettingsPage()),
+          ),
+          child: Container(
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.watch_later, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Even Faces:  ${face.name}',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: !fs.facesEnabled.value
+                        ? Colors.grey
+                        : (ok ? const Color(0xFF2E7D32) : Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      });
 
   Widget blePairedList() => Expanded(
         child: ListView.separated(
@@ -133,6 +187,8 @@ class _HomePageState extends State<HomePage> {
                       style: const TextStyle(fontSize: 16)),
                 ),
               ),
+              const SizedBox(height: 16),
+              _facesTile(),
               const SizedBox(height: 16),
               if (BleManager.get().getConnectionStatus() == 'Not connected')
                 blePairedList(),

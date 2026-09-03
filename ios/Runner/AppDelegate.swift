@@ -65,6 +65,9 @@ import Flutter
         let eventSpeechRecognizeEvent = FlutterEventChannel(name: "eventSpeechRecognize", binaryMessenger: messenger)
         eventSpeechRecognizeEvent.setStreamHandler(self)
 
+        // Background keep-alive (silent audio loop) for the Face engine.
+        KeepAlive.install(messenger: messenger)
+
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
 }

@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:demo_ai_even/app.dart';
+import 'package:demo_ai_even/faces/face_scheduler.dart';
 import 'package:demo_ai_even/services/ble.dart';
 import 'package:demo_ai_even/services/evenai.dart';
 import 'package:demo_ai_even/services/proto.dart';
@@ -95,8 +98,35 @@ class BleManager {
     connectionStatus = 'Connected: \n${arguments['leftDeviceName']} \n${arguments['rightDeviceName']}';
     isConnected = true;
 
+    final leftName = arguments['leftDeviceName'] as String? ?? '';
+    _lastChannelNumber = _channelFromName(leftName);
+    _stopReconnect();
+
     onStatusChanged?.call();
     startSendBeatHeart();
+    _initGlassesSession();
+  }
+
+  /// Session init after (re-)connect, from the community protocol research:
+  ///  - 0x4D 0xFB INIT on the LEFT arm (the official app always sends this;
+  ///    some features misbehave without it)
+  ///  - 0x27 0x01 wear detection ON (enables 0xF5 06/07 worn/removed events)
+  ///  - 0x2C 0x01 battery read (reply is handled in _handleReceivedData,
+  ///    battery levels also arrive as unsolicited pushes)
+  Future<void> _initGlassesSession() async {
+    try {
+      await request(Uint8List.fromList([0x4D, 0xFB]), lr: 'L', timeoutMs: 1500);
+      final wearL =
+          await request(Uint8List.fromList([0x27, 0x01]), lr: 'L', timeoutMs: 1500);
+      if (!wearL.isTimeout) {
+        await request(Uint8List.fromList([0x27, 0x01]), lr: 'R', timeoutMs: 1500);
+      }
+      await sendData(Uint8List.fromList([0x2C, 0x01]), lr: 'L');
+      await sendData(Uint8List.fromList([0x2C, 0x01]), lr: 'R');
+    } catch (e) {
+      print('Glasses session init failed: $e');
+    }
+    FaceScheduler.get().onConnected();
   }
 
   int tryTime = 0;
@@ -126,6 +156,88 @@ class BleManager {
     isConnected = false;
 
     onStatusChanged?.call();
+    FaceScheduler.get().onDisconnected();
+    // A failed reconnect attempt reports this event too - in both cases the
+    // chain continues (a new chain starts if none is running).
+    if (_reconnectActive) {
+      _scheduleNextReconnect();
+    } else {
+      _startReconnect();
+    }
+  }
+
+  // ------------------------------------------------------- auto-reconnect
+  // Strategy from G1_Extended: retry every 2 s for the first 30 s, then
+  // ramp the delay up to 5 min. Gives up after ~2 h of attempts so we do
+  // not fight the official Even G1 app forever.
+  String? _lastChannelNumber;
+  Timer? _reconnectTimer;
+  int _reconnectAttempt = 0;
+  bool _reconnectActive = false;
+  static const int _maxReconnectAttempts = 40;
+
+  /// "Even G1_<channel>_<L|R>_<serial>" -> "<channel>"
+  String? _channelFromName(String name) {
+    final parts = name.split('_');
+    if (parts.length >= 3 && parts[0].trim().startsWith('Even G1')) {
+      return parts[1];
+    }
+    return null;
+  }
+
+  void _startReconnect() {
+    if (_lastChannelNumber == null) return;
+    _reconnectActive = true;
+    _reconnectAttempt = 0;
+    _scheduleNextReconnect();
+  }
+
+  void _stopReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _reconnectActive = false;
+    _reconnectAttempt = 0;
+  }
+
+  void _scheduleNextReconnect() {
+    final channel = _lastChannelNumber;
+    if (isConnected || !_reconnectActive || channel == null) return;
+    if (_reconnectAttempt >= _maxReconnectAttempts) {
+      print('AutoReconnect: giving up after $_maxReconnectAttempts attempts');
+      _stopReconnect();
+      return;
+    }
+    _reconnectAttempt++;
+    final attempt = _reconnectAttempt;
+    final delay = _reconnectDelaySec();
+    print('AutoReconnect: attempt $attempt in ${delay}s');
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(Duration(seconds: delay), () {
+      if (isConnected || connectionStatus == 'Connecting...') return;
+      print('AutoReconnect: connecting to Pair_$channel (attempt $attempt)');
+      connectToGlasses('Pair_$channel');
+      // Fallback: if the native connect neither connects nor reports a
+      // disconnect (device off), do not hang in "Connecting..." forever.
+      _reconnectTimer = Timer(const Duration(seconds: 12), () {
+        if (isConnected) return;
+        if (connectionStatus == 'Connecting...') {
+          connectionStatus = 'Not connected';
+          onStatusChanged?.call();
+        }
+        _scheduleNextReconnect();
+      });
+    });
+  }
+
+  int _reconnectDelaySec() {
+    if (_reconnectAttempt <= 15) return 2;
+    var d = 30;
+    var i = _reconnectAttempt - 15;
+    while (i > 1 && d < 300) {
+      d = (d * 2) > 300 ? 300 : d * 2;
+      i--;
+    }
+    return d;
   }
 
   void _onPairedGlassesFound(Map<String, String> deviceInfo) {
@@ -151,19 +263,43 @@ class BleManager {
       );
     }
 
+    // Battery level report per side: [0x2C, 0x66, percent 0-100, ...]
+    // (reply to GET_BATTERY and also pushed unsolicited)
+    if (res.data[0].toInt() == 0x2C &&
+        res.data.length >= 3 &&
+        res.data[1].toInt() == 0x66) {
+      FaceScheduler.get().onBattery(res.lr, res.data[2].toInt());
+      return;
+    }
+
     if (res.data[0].toInt() == 0xF5) {
       final notifyIndex = res.data[1].toInt();
-      
+
       switch (notifyIndex) {
         case 0:
           App.get.exitAll();
           break;
-        case 1: 
-          if (res.lr == 'L') {
+        case 1: // single tap
+          // Faces mode wins for single taps unless EvenAI is actively
+          // running (long-press flow) - then EvenAI paging keeps working.
+          if (FaceScheduler.get().facesEnabled.value &&
+              !EvenAI.isRunning) {
+            if (res.lr == 'L') {
+              FaceScheduler.get().prevFace();
+            } else {
+              FaceScheduler.get().nextFace();
+            }
+          } else if (res.lr == 'L') {
             EvenAI.get.lastPageByTouchpad();
           } else {
             EvenAI.get.nextPageByTouchpad();
           }
+          break;
+        case 6: // worn
+          FaceScheduler.get().onWearChanged(true);
+          break;
+        case 7: // removed
+          FaceScheduler.get().onWearChanged(false);
           break;
         case 23: //BleEvent.evenaiStart:
           EvenAI.get.toStartEvenAIByOS();
