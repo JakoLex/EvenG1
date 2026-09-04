@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 ///   3. Floyd-Steinberg dither to 1 bit (1 = pixel ON = green)
 ///   4. pack to a 9856-byte BMP: 64-byte header (byte-identical to
 ///      assets/images/image_2.bmp) + 9792 bottom-up rows of 72 bytes,
-///      MSB-first.
+///      MSB-first, **inverted** (see [encodeBmp]).
 ///
 /// Steps 3 and 4 are pure Dart and fully unit-testable; step 2 uses the
 /// Flutter software rasterizer (also available in flutter_test).
@@ -104,19 +104,26 @@ class FaceRenderer {
 
   /// Packs 1-bit row-major (top-down, 1=ON) pixels into BMP file bytes:
   /// [header] + 9792 bytes, bottom-up, 72 bytes/row, MSB-first.
+  ///
+  /// **The bit sense is inverted.** The colour table of the template header
+  /// (bytes 54..61 of assets/images/image_2.bmp) is
+  /// `index 0 = ff ff ff` (white -> lit green) and `index 1 = 00 00 00`
+  /// (black -> dark), so a *set* bit is a DARK pixel. The template's own
+  /// payload agrees: 71 % of its bytes are 0xFF, i.e. unlit background.
+  /// We therefore start from all-ones and clear the bits that light up.
   static Uint8List encodeBmp(Uint8List bits, {required Uint8List header}) {
     assert(bits.length == width * height,
         'bits must be ${width * height} bytes');
     assert(header.length == 64, 'header must be 64 bytes');
 
-    final px = Uint8List(pixelBytes);
+    final px = Uint8List(pixelBytes)..fillRange(0, pixelBytes, 0xFF);
     for (var y = 0; y < height; y++) {
       final imageRow = y; // 0 = top
       final fileRow = height - 1 - y; // BMP is bottom-up
       for (var x = 0; x < width; x++) {
         if (bits[imageRow * width + x] == 1) {
           final idx = fileRow * rowBytes + (x ~/ 8);
-          px[idx] = px[idx] | (0x80 >> (x % 8));
+          px[idx] = px[idx] & ~(0x80 >> (x % 8)) & 0xFF;
         }
       }
     }

@@ -14,7 +14,8 @@ void main() {
   const int h = 136;
   const int rowBytes = 72;
 
-  /// Decode the px region of a rendered file back to bits (top-down).
+  /// Decode the px region of a rendered file back to logical bits (top-down,
+  /// 1 = lit). The file stores them inverted - see FaceRenderer.encodeBmp.
   List<int> decodePxBits(Uint8List file) {
     final out = <int>[];
     for (var y = 0; y < h; y++) {
@@ -24,7 +25,7 @@ void main() {
         64 + (fileRow + 1) * rowBytes,
       );
       for (var x = 0; x < w; x++) {
-        out.add((row[x ~/ 8] >> (7 - x % 8)) & 1);
+        out.add(1 - ((row[x ~/ 8] >> (7 - x % 8)) & 1));
       }
     }
     return out;
@@ -92,12 +93,13 @@ void main() {
       for (var i = 0; i < 64; i++) {
         expect(file[i], 0xAB, reason: 'header byte $i');
       }
+      // a lit pixel CLEARS its bit (inverted palette)
       // top row of the image = LAST file row
-      expect(file[64 + (h - 1) * rowBytes] & 0x80, 0x80);
-      expect(file[64 + (h - 1) * rowBytes + rowBytes - 1] & 0x01, 0x01);
+      expect(file[64 + (h - 1) * rowBytes] & 0x80, 0x00);
+      expect(file[64 + (h - 1) * rowBytes + rowBytes - 1] & 0x01, 0x00);
       // bottom row of the image = FIRST file row
-      expect(file[64] & 0x80, 0x80);
-      expect(file[64 + rowBytes - 1] & 0x01, 0x01);
+      expect(file[64] & 0x80, 0x00);
+      expect(file[64 + rowBytes - 1] & 0x01, 0x00);
       // and nothing else is set
       expect(
         decodePxBits(file),
@@ -110,9 +112,16 @@ void main() {
       );
     });
 
-    test('all-on bits -> every px byte is 0xFF', () {
+    test('all-on bits -> every px byte is 0x00 (inverted)', () {
       final bits = Uint8List(w * h)..fillRange(0, w * h, 1);
       final file = FaceRenderer.encodeBmp(bits, header: header);
+      for (var i = 64; i < file.length; i++) {
+        expect(file[i], 0x00, reason: 'px byte $i');
+      }
+    });
+
+    test('all-off bits -> every px byte is 0xFF, like the template', () {
+      final file = FaceRenderer.encodeBmp(Uint8List(w * h), header: header);
       for (var i = 64; i < file.length; i++) {
         expect(file[i], 0xFF, reason: 'px byte $i');
       }
@@ -160,6 +169,22 @@ void main() {
   });
 
   group('template header (golden)', () {
+    test('colour table maps a set bit to black (dark pixel)', () {
+      final template = File('assets/images/image_2.bmp').readAsBytesSync();
+      // BMP colour table for 1 bpp, BGRA per entry, at offset 54.
+      expect(template.sublist(54, 58), [0xFF, 0xFF, 0xFF, 0x00],
+          reason: 'index 0 must be white = lit');
+      expect(template.sublist(58, 62), [0x00, 0x00, 0x00, 0x00],
+          reason: 'index 1 must be black = dark');
+      // ... which is why encodeBmp inverts: an unlit frame matches the
+      // template's own mostly-0xFF background.
+      final unlit = FaceRenderer.encodeBmp(
+        Uint8List(w * h),
+        header: Uint8List.fromList(template.sublist(0, 64)),
+      );
+      expect(unlit[64], 0xFF);
+    });
+
     testWidgets('matches the shipped image_2.bmp', (tester) async {
       final f = File('assets/images/image_2.bmp');
       expect(f.existsSync(), isTrue,

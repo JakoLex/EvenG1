@@ -104,8 +104,15 @@ halves update independently as each arm receives its packets).
 
 **Exception:** the BMP bulk transfer (`0x15` chunks) *may* be written to both
 arms concurrently — it is a write to arm-local storage, not a display update.
-This is what this repo does (`Future.wait([updateBmp("L"), updateBmp("R")])`)
-and it works on hardware.
+
+The end marker (`0x20`) and the CRC (`0x16`) are **not** covered by that
+exception: the CRC is what makes an arm latch the new frame, so it is a
+display update and follows the left-then-right rule. Running the whole
+sequence concurrently (`Future.wait([updateBmp("L"), updateBmp("R")])`, what
+this repo did until v2.0.1) lets the halves latch at different moments and
+shows up as a torn or out-of-sync display. `BmpUpdateManager.updateBmpBothArms`
+implements the phased order: concurrent chunks, then `0x20` L→R, then
+`0x16` L→R.
 
 ---
 

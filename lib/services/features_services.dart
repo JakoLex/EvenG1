@@ -8,18 +8,16 @@ class FeaturesServices {
   final bmpUpdateManager = BmpUpdateManager();
   Future<void> sendBmp(String imageUrl) async {
     Uint8List bmpData = await Utils.loadBmpImage(imageUrl);
-    int initialSeq = 0;
     bool isSuccess = await Proto.sendHeartBeat();
     print("${DateTime.now()} testBMP -------startSendBeatHeart----isSuccess---$isSuccess------");
     BleManager.get().startSendBeatHeart();
 
-    final results = await Future.wait([
-      bmpUpdateManager.updateBmp("L", bmpData, seq: initialSeq),
-      bmpUpdateManager.updateBmp("R", bmpData, seq: initialSeq)
-    ]);
+    // Ordered dual-arm push: concurrent bulk data, then end marker and CRC
+    // left-before-right so both halves latch the same frame.
+    final results = await bmpUpdateManager.updateBmpBothArms(bmpData);
 
-    bool successL = results[0];
-    bool successR = results[1];
+    bool successL = results.left;
+    bool successR = results.right;
 
     if (successL) {
       print("${DateTime.now()} left ble success");
@@ -30,7 +28,7 @@ class FeaturesServices {
     if (successR) {
       print("${DateTime.now()} right ble success");
     } else {
-      print("${DateTime.now()} right ble success");
+      print("${DateTime.now()} right ble fail");
     }
   }
 

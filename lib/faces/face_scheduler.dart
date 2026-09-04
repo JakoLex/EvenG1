@@ -245,10 +245,14 @@ class FaceScheduler extends GetxService {
     }
   }
 
-  /// Renders the active face and pushes it to both arms in parallel
-  /// (the BMP pipeline is the one both-arm flow that may run concurrently).
+  /// Renders the active face and pushes it to both arms through the ordered
+  /// dual-arm flow (see BmpUpdateManager.updateBmpBothArms). If exactly one
+  /// arm drops out, that arm is re-sent once - otherwise the two halves would
+  /// show different frames until the next refresh, which on the clock face is
+  /// a full minute away.
   Future<void> pushActiveFace() async {
     if (!_connected || !facesEnabled.value || pushing.value) return;
+    if (BmpUpdateManager.isTransferring) return; // e.g. the BMP demo page
     pushing.value = true;
     final now = DateTime.now();
     try {
@@ -266,15 +270,18 @@ class FaceScheduler extends GetxService {
       );
       final bits = await _renderer.renderBits(face, data);
       final bmp = FaceRenderer.encodeBmp(bits, header: await _renderer.header());
-      final results = await Future.wait([
-        _bmp.updateBmp('L', bmp),
-        _bmp.updateBmp('R', bmp),
-      ]);
-      if (results[0] && results[1]) {
+      var res = await _bmp.updateBmpBothArms(bmp);
+      if (res.left != res.right) {
+        final lr = res.left ? 'R' : 'L';
+        print('FaceScheduler: $lr dropped out, re-sending that arm');
+        final retry = await _bmp.updateBmp(lr, bmp);
+        res = (left: res.left || retry, right: res.right || retry);
+      }
+      if (res.left && res.right) {
         linkCounter.value++;
         lastSuccessAt.value = DateTime.now();
       } else {
-        print('FaceScheduler: push failed (L=${results[0]}, R=${results[1]})');
+        print('FaceScheduler: push failed (L=${res.left}, R=${res.right})');
       }
     } catch (e) {
       print('FaceScheduler push failed: $e');

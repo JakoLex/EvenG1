@@ -53,49 +53,70 @@ class _HomePageState extends State<HomePage> {
         final fs = FaceScheduler.get;
         final face = FaceScheduler.faces[fs.activeFaceIndex.value];
         final last = fs.lastSuccessAt.value;
+        final connected = BleManager.get().isConnected;
         final ok = last != null &&
-            DateTime.now()
-                .difference(last)
-                .inSeconds <
+            DateTime.now().difference(last).inSeconds <
                 3 * fs.linkIntervalSec.value;
-        final status = !fs.facesEnabled.value
-            ? 'off'
-            : (BleManager.get().isConnected
-                ? (ok ? 'LINK OK  #${fs.linkCounter.value}' : 'NO LINK')
-                : 'not connected');
-        return GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const FaceSettingsPage()),
-          ),
-          child: Container(
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
+        final String status;
+        final Color statusColor;
+        if (!fs.facesEnabled.value) {
+          status = 'aus';
+          statusColor = Colors.black38;
+        } else if (!connected) {
+          status = 'nicht verbunden';
+          statusColor = Colors.black38;
+        } else if (ok) {
+          status = 'live  ·  #${fs.linkCounter.value}';
+          statusColor = const Color(0xFF2E7D32);
+        } else {
+          status = 'keine Verbindung';
+          statusColor = Colors.red;
+        }
+        return Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(kRadius),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(kRadius),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const FaceSettingsPage()),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Icon(Icons.watch_later, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Even Faces:  ${face.name}',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF14351F),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: const Icon(Icons.watch_later_outlined,
+                        size: 20, color: kPanelGreen),
                   ),
-                ),
-                Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: !fs.facesEnabled.value
-                        ? Colors.grey
-                        : (ok ? const Color(0xFF2E7D32) : Colors.red),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Even Faces  ·  ${face.name}',
+                          style: const TextStyle(
+                              fontSize: 15.5, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          status,
+                          style: TextStyle(fontSize: 12.5, color: statusColor),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const Icon(Icons.chevron_right,
+                      size: 20, color: Colors.black26),
+                ],
+              ),
             ),
           ),
         );

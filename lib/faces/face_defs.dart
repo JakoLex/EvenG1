@@ -45,6 +45,10 @@ abstract class Face {
   String get id;
   String get name;
 
+  /// One line for the settings list - what this face shows and how often it
+  /// refreshes. Lives on the face so the UI does not need a parallel list.
+  String get description;
+
   void paint(Canvas canvas, Size size, FaceData data);
 
   static String _two(int v) => v.toString().padLeft(2, '0');
@@ -91,6 +95,9 @@ class ClockFace extends Face {
   String get id => 'clock';
   @override
   String get name => 'Clock';
+  @override
+  String get description =>
+      'Uhrzeit und Datum, aktualisiert zur vollen Minute';
 
   @override
   void paint(Canvas canvas, Size size, FaceData data) {
@@ -126,6 +133,9 @@ class TextFace extends Face {
   String get id => 'text';
   @override
   String get name => 'Text';
+  @override
+  String get description =>
+      'Dein eigener Text, erscheint sobald du ihn änderst';
 
   static const double _fontSize = 22;
   static const double _lineHeight = 1.35;
@@ -168,6 +178,9 @@ class LinkFace extends Face {
   String get id => 'link';
   @override
   String get name => 'Link';
+  @override
+  String get description =>
+      'Sekundenuhr, Verbindungsstatus und Akku beider Bügel';
 
   @override
   void paint(Canvas canvas, Size size, FaceData data) {
