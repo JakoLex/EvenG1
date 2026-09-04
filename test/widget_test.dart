@@ -11,15 +11,24 @@ void main() {
     KeepAliveService.create();
     FaceScheduler.create();
 
+    // The page is a lazy ListView: on the default 800x600 surface the lower
+    // cards are never built and the finders below would miss them.
+    await tester.binding.setSurfaceSize(const Size(1200, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       const MaterialApp(home: FaceSettingsPage()),
     );
 
     expect(find.text('Even Faces'), findsOneWidget);
-    expect(find.text('Preview (what the glasses show)'), findsOneWidget);
-    expect(find.text('Clock'), findsOneWidget);
-    expect(find.text('Text'), findsOneWidget);
-    expect(find.text('Link'), findsOneWidget);
+    expect(find.text('Faces aktiv'), findsOneWidget);
+    expect(find.text('So funktioniert es'), findsOneWidget);
+    expect(find.text('Vorschau'), findsOneWidget);
+    // one tile per face, each with its own description
+    for (final face in FaceScheduler.faces) {
+      expect(find.text(face.name), findsOneWidget, reason: face.id);
+      expect(find.text(face.description), findsOneWidget, reason: face.id);
+    }
 
     // let the 1 s preview ticker fire a few times, then settle
     await tester.pump(const Duration(seconds: 3));
